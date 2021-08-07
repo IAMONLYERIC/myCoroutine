@@ -27,6 +27,22 @@ void coroutine_resume(schedule_t &schedule , int id)
         t->state = RUNNING;
         schedule.running_thread = id;
         swapcontext(&(schedule.main),&(t->ctx));
+    }else if(t->state == RUNNABLE){
+        // 如果是新创建的协程，先指定栈空间
+        getcontext(&(t->ctx));
+        t->ctx.uc_stack.ss_sp = t->stack;
+        t->ctx.uc_stack.ss_size = DEFAULT_STACK_SZIE;
+        t->ctx.uc_stack.ss_flags = 0;
+        t->ctx.uc_link = &(schedule.main); // 后续执行main
+        schedule.running_thread = id; // 设置当前的运行协程为该协程
+        // 设置新协程要执行的函数
+        // 将uthread_body 转成 void (*)(void)类型
+        makecontext(&(t->ctx),(void (*)(void))(coroutine_body),1,&schedule);
+        // 保存当前上下文到main,开始执行协程.
+        t->state = RUNNING;
+        swapcontext(&(schedule.main), &(t->ctx));
+        // 由于当前协程里面调用了yield让出了当前cpu，所以或继续执行这里 返回到main函数
+        std::cout << id <<": resume" << std::endl;
     }
 }
 
@@ -54,7 +70,6 @@ void coroutine_body(schedule_t *ps)
         
         t->func(t->arg);
         std::cout << id <<  ": t->func over " << std::endl;
-
         // 协程跑完后，当前的位置重新设置为FREE
         t->state = FREE;
         ps->running_thread = -1;
@@ -83,22 +98,6 @@ int coroutine_create(schedule_t &schedule,Fun func,void *arg)
     t->func = func;
     t->arg = arg;
 
-    // 设置协程的上下文，指定栈空间
-    getcontext(&(t->ctx));
-    t->ctx.uc_stack.ss_sp = t->stack;
-    t->ctx.uc_stack.ss_size = DEFAULT_STACK_SZIE;
-    t->ctx.uc_stack.ss_flags = 0;
-    t->ctx.uc_link = &(schedule.main); // 后续执行main
-    schedule.running_thread = id; // 设置当前的运行协程为该协程
-    
-    // 设置新协程要执行的函数
-    // 将uthread_body 转成 void (*)(void)类型
-    makecontext(&(t->ctx),(void (*)(void))(coroutine_body),1,&schedule);
-    // 保存当前上下文到main,开始执行协程.
-    t->state = RUNNING;
-    swapcontext(&(schedule.main), &(t->ctx));
-    // 由于当前协程里面调用了yield让出了当前cpu，所以或继续执行这里 返回到main函数
-    std::cout << id <<": resume" << std::endl;
     return id;
 }
 

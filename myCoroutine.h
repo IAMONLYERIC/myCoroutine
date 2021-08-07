@@ -16,7 +16,7 @@
 #include <vector>
 
 #define DEFAULT_STACK_SZIE (1024*128) // 默认128K大小的栈空间
-#define MAX_UTHREAD_SIZE   1024 // 最多允许的协程数量
+#define MAX_UTHREAD_SIZE   10240 // 最多允许的协程数量
 
 // 协程状态
 enum ThreadState{FREE,RUNNABLE,RUNNING,SUSPEND};
@@ -72,13 +72,13 @@ struct schedule_t
 /*help the thread running in the schedule*/
 static void coroutine_body(schedule_t *ps);
 
-// 创建协程，并运行
+// 创建协程
 int  coroutine_create(schedule_t &schedule,Fun func,void *arg);
 
 // 挂起当前正在运行的协程，返回主函数
 void coroutine_yield(schedule_t &schedule);
 
-// 恢复第id个协程
+// 恢复或运行第id个协程
 void coroutine_resume(schedule_t &schedule,int id);
 
 // 检测协程是否全部运行完毕

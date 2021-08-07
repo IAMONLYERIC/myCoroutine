@@ -7,7 +7,7 @@
 #include "myCoroutine.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include<sys/time.h>
+#include <sys/time.h>
 
 void func1(void * arg)
 {
@@ -66,6 +66,7 @@ void schedule_test()
     // 创建两个协程 返回在协程数组里面的下标id
     int id1 = coroutine_create(s,func3,&s);
     int id2 = coroutine_create(s,func2,&s);
+    puts("create over \n");
     
     while(!schedule_finished(s)){
         coroutine_resume(s,id1);
@@ -77,17 +78,39 @@ void schedule_test()
 
 int test_perfor()
 {
-    struct timeval begin;
+    struct timeval start;
     struct timeval end;
-    gettimeofday(&begin, NULL);
+    gettimeofday(&start, NULL);
+    schedule_t s;
+    int c_id[10000];
+    for(int i = 0; i < 10000; i++)
+    {
+        c_id[i] = coroutine_create(s, func2, &s);
+    }
+    gettimeofday(&end, NULL);
+    double timeuse = 1000 * ( end.tv_sec - start.tv_sec ) + 0.001*(end.tv_usec-start.tv_usec);
+    printf("time: %f ms\n", timeuse);
+
+    gettimeofday(&start, NULL);
+    while(!schedule_finished(s))
+        for(auto id : c_id)
+        {
+            coroutine_resume(s, id);
+        }
+    gettimeofday(&end, NULL);
+    timeuse = 1000 * ( end.tv_sec - start.tv_sec ) + 0.001*(end.tv_usec-start.tv_usec);
+    printf("time: %f ms\n", timeuse);
+    
 
 }
 int main()
 {
 
-    context_test();
-    puts("----------------");
-    schedule_test();
+    // context_test();
+    // puts("----------------");
+    // schedule_test();
+
+    test_perfor();
 
     return 0;
 }
